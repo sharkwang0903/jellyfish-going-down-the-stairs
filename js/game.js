@@ -173,6 +173,10 @@
     }
 
     handleLanding(platform) {
+      if (platform.type === "spring") {
+        this.platformManager.triggerSpring(platform);
+      }
+
       this.player.landOn(platform);
 
       if (platform.type === "spike") {
@@ -256,6 +260,8 @@
           platform.type === "conveyor-right"
         ) {
           this.drawConveyor(platform);
+        } else if (platform.type === "spring") {
+          this.drawSpring(platform);
         } else {
           ctx.drawImage(
             this.images.platform,
@@ -266,6 +272,33 @@
           );
         }
       }
+    }
+
+    drawSpring(platform) {
+      const images = {
+        idle: this.images.platformSpringIdle,
+        compressed: this.images.platformSpringCompressed,
+        extended: this.images.platformSpringExtended
+      };
+      const surfaceOffsets = {
+        idle: 0,
+        compressed: C.SPRING_COMPRESS_OFFSET,
+        extended: C.SPRING_EXTEND_OFFSET
+      };
+      const state = images[platform.state] ? platform.state : "idle";
+      const image = images[state];
+      const renderWidth = C.PLATFORM_WIDTH;
+      const renderHeight = image.height * (C.PLATFORM_WIDTH / image.width);
+      const surfaceY = platform.y + surfaceOffsets[state];
+      const drawY = surfaceY - renderHeight * C.SPRING_IMAGE_SURFACE_Y[state];
+
+      this.context.drawImage(
+        image,
+        platform.x,
+        drawY,
+        renderWidth,
+        renderHeight
+      );
     }
 
     drawConveyor(platform) {

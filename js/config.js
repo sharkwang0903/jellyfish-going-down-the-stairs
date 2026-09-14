@@ -37,9 +37,19 @@
     INITIAL_PLATFORM_Y: 285,
     INITIAL_SAFE_PLATFORM_COUNT: 3,
     BREAKABLE_LIFETIME: 0.3,
+    SPRING_COMPRESS_TIME: 0.07,
+    SPRING_RELEASE_TIME: 0.07,
+    BOUNCE_SPEED: 570,
+    SPRING_COMPRESS_OFFSET: 6,
+    SPRING_EXTEND_OFFSET: -4,
+    SPRING_IMAGE_SURFACE_Y: Object.freeze({
+      idle: 179 / 724,
+      compressed: 263 / 724,
+      extended: 71 / 724
+    }),
     CONVEYOR_IDLE_DRIFT: 90,
-    CONVEYOR_SAME_DIRECTION_MULTIPLIER: 1.45,
-    CONVEYOR_OPPOSITE_DIRECTION_MULTIPLIER: 0.55,
+    CONVEYOR_SAME_DIRECTION_MULTIPLIER: 1.6,
+    CONVEYOR_OPPOSITE_DIRECTION_MULTIPLIER: 0.45,
     CONVEYOR_VISUAL_SPEED: 80,
     CONVEYOR_BELT_SLOT: Object.freeze({
       x: 389 / 2172,
@@ -72,7 +82,8 @@
       "spike",
       "breakable",
       "conveyor-left",
-      "conveyor-right"
+      "conveyor-right",
+      "spring"
     ]),
     MAX_CONSECUTIVE_SPIKES: 1,
     MAX_DEPTH_WITHOUT_NORMAL_PLATFORM: 2000,
@@ -106,6 +117,9 @@
       platformBreakableBreaking: "assets/platform-breakable-breaking.png",
       conveyorBase: "assets/conveyor-base.png",
       conveyorBeltStrip: "assets/conveyor-belt-strip.png",
+      platformSpringIdle: "assets/platform-spring-idle.png",
+      platformSpringCompressed: "assets/platform-spring-compressed.png",
+      platformSpringExtended: "assets/platform-spring-extended.png",
       ceilingSpikes: "assets/ceiling-spikes.png"
     })
   });

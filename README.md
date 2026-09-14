@@ -20,7 +20,7 @@
 | `→` | 水母向右移動 |
 | 放開方向鍵 | 立即停止水平移動 |
 
-角色不能跳躍。玩家必須左右移動，讓水母從上方落到下一個平台。
+角色沒有主動跳躍操作。玩家必須左右移動，讓水母從上方落到下一個平台；落到跳板平台時會被自動向上彈起。
 
 目前版本只支援鍵盤操作，不包含手機觸控控制。
 
@@ -39,6 +39,7 @@
 | --- | --- |
 | 成功落到普通平台 | `HP + 1`，不超過 10 |
 | 成功落到破碎平台 | `HP + 1`，並開始破碎倒數 |
+| 成功落到跳板平台 | `HP + 1`，播放壓縮與伸展後向上彈起 |
 | 成功落到尖刺平台 | `HP - 4` |
 | 碰到頂部尖刺 | 非無敵時 `HP - 4`，並且一定會被打下 |
 
@@ -77,6 +78,14 @@
 - 輸入方向與帶面相同時，水平速度為 `MOVE_SPEED × CONVEYOR_SAME_DIRECTION_MULTIPLIER`；輸入相反時則為 `MOVE_SPEED × CONVEYOR_OPPOSITE_DIRECTION_MULTIPLIER`。
 - 帶面動畫速度與物理速度分離：`CONVEYOR_VISUAL_SPEED` 只控制帶面捲動，不會影響玩家移動。
 - belt strip 會在底座中央槽內循環平鋪，固定底座繪製於上層，避免帶面超出外框。
+
+### Spring／跳板平台
+
+- 使用 `assets/platform-spring-idle.png`、`assets/platform-spring-compressed.png`、`assets/platform-spring-extended.png`。
+- 只有合法 landing 會觸發；成功落地時依非尖刺平台共通規則回復 1 HP。
+- 先播放 `compressed` 0.07 秒，再播放 `extended` 0.07 秒，完成後將玩家垂直速度設為 `-BOUNCE_SPEED`。
+- 跳板完成一次動作後回到 `idle`，玩家未來再次合法 landing 時可以再次觸發。
+- 玩家沒有主動跳躍按鍵；上升途中因 `vy < 0` 不會觸發其他平台 landing。
 
 破碎動畫使用 `BREAKABLE_LIFETIME / 3` 作為每階段時間：
 
@@ -140,21 +149,22 @@ scrollSpeed = Math.min(
 - 使用小型逐幀模擬計算玩家下落與平台上移相遇所需的時間。
 - 以 `MOVE_SPEED × fallTime × SAFE_REACH_FACTOR` 計算安全水平距離。
 - 水平判斷使用兩個平台可供玩家站立的範圍，不只比較平台中心點。
-- Breakable 與 Normal 使用相同的可達性條件。
+- Breakable、Spring 與 Normal 使用相同的可達性條件。
 - 從 Conveyor 離開時，安全水平距離會依順向／逆向倍率調整，避免反向傳送帶令保底路徑過度極限。
 - 若指定間距沒有可達位置，生成器會使用偏好的安全間距再次嘗試，並保留安全的水平位置備援。
 
-在安全規則沒有介入時，五種平台的基礎抽選機率相同：
+在安全規則沒有介入時，六種平台的基礎抽選機率相同：
 
 ```text
-normal          1/5
-spike           1/5
-breakable       1/5
-conveyor-left   1/5
-conveyor-right  1/5
+normal          1/6
+spike           1/6
+breakable       1/6
+conveyor-left   1/6
+conveyor-right  1/6
+spring          1/6
 ```
 
-既有安全規則仍可覆寫基礎抽選，例如初始安全平台、禁止連續尖刺，以及確保一定距離內重新出現普通平台。因此長期實際統計比例不保證精確各占五分之一。
+既有安全規則仍可覆寫基礎抽選，例如初始安全平台、禁止連續尖刺，以及確保一定距離內重新出現普通平台。因此長期實際統計比例不保證精確各占六分之一。
 
 ## 專案結構
 
@@ -168,7 +178,7 @@ jellyfish-going-down-the-stairs/
    ├─ config.js        所有可調參數與素材路徑
    ├─ physics.js       hitbox、landing 與平台可達性計算
    ├─ player.js        玩家移動、生命、無敵與站立狀態
-   ├─ platforms.js     平台生成、移動、破碎／傳送帶狀態與清理
+   ├─ platforms.js     平台生成、移動、破碎／傳送帶／跳板狀態與清理
    ├─ ui.js            首頁、HUD、最高紀錄與 Game Over 顯示
    ├─ game.js          主迴圈、遊戲狀態、landing 效果與 Canvas 渲染
    └─ main.js          初始化、按鈕與鍵盤事件綁定
@@ -189,6 +199,7 @@ JavaScript 透過 `window.JellyfishGame` 共用命名空間，載入順序定義
 | 尖刺平台 | `assets/platform-spike.png` |
 | 破碎平台 | 四張 `platform-breakable-*.png` |
 | 傳送帶平台 | `assets/conveyor-base.png`、`assets/conveyor-belt-strip.png` |
+| 跳板平台 | 三張 `platform-spring-*.png` |
 | 頂部尖刺 | `assets/ceiling-spikes.png` |
 
 Canvas 渲染時停用圖片平滑處理，以保留偽像素風格。
@@ -205,6 +216,7 @@ Canvas 渲染時停用圖片平滑處理，以保留偽像素風格。
 | 可達性 | `SAFE_REACH_FACTOR`、`REACH_SIMULATION_*` |
 | 破碎平台 | `BREAKABLE_LIFETIME` |
 | 傳送帶 | `CONVEYOR_IDLE_DRIFT`、`CONVEYOR_SAME_DIRECTION_MULTIPLIER`、`CONVEYOR_OPPOSITE_DIRECTION_MULTIPLIER`、`CONVEYOR_VISUAL_SPEED`、`CONVEYOR_BELT_*` |
+| 跳板 | `SPRING_COMPRESS_TIME`、`SPRING_RELEASE_TIME`、`BOUNCE_SPEED`、`SPRING_COMPRESS_OFFSET`、`SPRING_EXTEND_OFFSET`、`SPRING_IMAGE_SURFACE_Y` |
 | 生命 | `MAX_HP`、`NORMAL_HEAL`、`SPIKE_DAMAGE`、`INVINCIBLE_TIME` |
 | 捲動 | `INITIAL_SCROLL_SPEED`、`SPEED_STEP`、`MAX_SCROLL_SPEED` |
 | 樓層 | `FLOOR_HEIGHT`、`FLOORS_PER_SPEED_UP` |
@@ -231,13 +243,15 @@ jellyfish-going-down-best-floor-v2
 1. 按住與放開左右鍵時，角色固定速度移動並立即停止。
 2. 角色只會從上方落到平台，不會因側撞或由下穿越而 landing。
 3. 玩家站立時會跟著平台上升，離開邊緣後重新下落。
-4. Normal、Breakable 與 Conveyor 每次 landing 只回血一次；Spike 每次 landing 只傷害一次。
+4. Normal、Breakable、Conveyor 與 Spring 每次 landing 只回血一次；Spike 每次 landing 只傷害一次。
 5. Breakable 依序播放三個破碎階段，0.3 秒後消失並讓玩家自然掉落。
 6. Conveyor 只在站立時推動玩家；離開邊緣、掉落或被頂部尖刺打下後，推力立即停止。
 7. Conveyor belt strip 在底座中央槽內連續循環，左右方向分別以相反方向捲動。
-8. 無敵期間不重複受傷，但碰到頂部尖刺仍會被打下。
-9. 樓層、加速、Game Over 與最高紀錄顯示一致。
-10. 重新整理頁面後最高紀錄仍存在。
+8. Spring 只由合法 landing 觸發，依序顯示壓縮與伸展各 0.07 秒，再以固定 `BOUNCE_SPEED` 向上彈射。
+9. 玩家上升時不會 landing；同一個 Spring 完成後可在下次 landing 再次觸發。
+10. 無敵期間不重複受傷，但碰到頂部尖刺仍會被打下。
+11. 樓層、加速、Game Over 與最高紀錄顯示一致。
+12. 重新整理頁面後最高紀錄仍存在。
 
 ## 維護原則
 

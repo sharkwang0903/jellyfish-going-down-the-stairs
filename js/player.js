@@ -26,8 +26,26 @@
     placeOn(platform) {
       this.standingPlatform = platform;
       this.vy = 0;
-      this.y = platform.y - C.PLAYER_HITBOX_OFFSET_Y - C.PLAYER_HITBOX_HEIGHT;
+      this.y =
+        platform.y + this.getStandingSurfaceOffset(platform) -
+        C.PLAYER_HITBOX_OFFSET_Y - C.PLAYER_HITBOX_HEIGHT;
       this.previousY = this.y;
+    }
+
+    getStandingSurfaceOffset(platform) {
+      if (!platform || platform.type !== "spring") {
+        return 0;
+      }
+
+      if (platform.state === "compressed") {
+        return C.SPRING_COMPRESS_OFFSET;
+      }
+
+      if (platform.state === "extended") {
+        return C.SPRING_EXTEND_OFFSET;
+      }
+
+      return 0;
     }
 
     update(dt, input) {
@@ -73,7 +91,19 @@
           Game.Physics.hasHorizontalOverlap(Game.Physics.getPlayerHitbox(this), platform);
 
         if (supported) {
-          this.y = platform.y - C.PLAYER_HITBOX_OFFSET_Y - C.PLAYER_HITBOX_HEIGHT;
+          if (platform.type === "spring" && platform.releaseRequested) {
+            platform.releaseRequested = false;
+            this.y =
+              platform.y + C.SPRING_EXTEND_OFFSET -
+              C.PLAYER_HITBOX_OFFSET_Y - C.PLAYER_HITBOX_HEIGHT;
+            this.standingPlatform = null;
+            this.vy = -C.BOUNCE_SPEED;
+            return;
+          }
+
+          this.y =
+            platform.y + this.getStandingSurfaceOffset(platform) -
+            C.PLAYER_HITBOX_OFFSET_Y - C.PLAYER_HITBOX_HEIGHT;
           this.vy = 0;
           return;
         }

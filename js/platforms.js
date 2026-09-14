@@ -62,6 +62,12 @@
         platform.beltOffset = 0;
       }
 
+      if (type === "spring") {
+        platform.state = "idle";
+        platform.springTimer = 0;
+        platform.releaseRequested = false;
+      }
+
       return platform;
     }
 
@@ -105,6 +111,42 @@
       platform.beltOffset = (
         platform.beltOffset + direction * C.CONVEYOR_VISUAL_SPEED * dt
       ) % beltPeriod;
+    }
+
+    triggerSpring(platform) {
+      if (platform.type !== "spring" || platform.state !== "idle" || !platform.active) {
+        return false;
+      }
+
+      platform.state = "compressed";
+      platform.springTimer = 0;
+      platform.releaseRequested = false;
+      return true;
+    }
+
+    updateSpring(platform, dt) {
+      if (platform.type !== "spring" || platform.state === "idle") {
+        return;
+      }
+
+      platform.springTimer += dt;
+
+      if (
+        platform.state === "compressed" &&
+        platform.springTimer >= C.SPRING_COMPRESS_TIME
+      ) {
+        platform.springTimer -= C.SPRING_COMPRESS_TIME;
+        platform.state = "extended";
+      }
+
+      if (
+        platform.state === "extended" &&
+        platform.springTimer >= C.SPRING_RELEASE_TIME
+      ) {
+        platform.state = "idle";
+        platform.springTimer = 0;
+        platform.releaseRequested = true;
+      }
     }
 
     chooseGap() {
@@ -154,7 +196,7 @@
       }
 
       const availableTypes = wouldExceedSpikeRun
-        ? ["normal", "breakable", "conveyor-left", "conveyor-right"]
+        ? ["normal", "breakable", "conveyor-left", "conveyor-right", "spring"]
         : C.PLATFORM_TYPES;
 
       return availableTypes[Math.floor(Math.random() * availableTypes.length)];
@@ -212,6 +254,7 @@
         platform.y -= scrollSpeed * dt;
         this.updateBreakable(platform, dt);
         this.updateConveyor(platform, dt);
+        this.updateSpring(platform, dt);
 
         if (platform.y + C.SPIKE_VISUAL_HEIGHT + platform.height < -C.PLATFORM_CULL_MARGIN) {
           platform.active = false;
