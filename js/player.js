@@ -36,13 +36,26 @@
       this.invincibleRemaining = Math.max(0, this.invincibleRemaining - dt);
       this.hurtRemaining = Math.max(0, this.hurtRemaining - dt);
 
+      let inputDirection = 0;
       if (input.left === input.right) {
-        this.vx = 0;
+        inputDirection = 0;
       } else if (input.left) {
-        this.vx = -C.MOVE_SPEED;
-        this.direction = -1;
+        inputDirection = -1;
       } else {
-        this.vx = C.MOVE_SPEED;
+        inputDirection = 1;
+      }
+
+      const standingPlatform = this.standingPlatform && this.standingPlatform.active
+        ? this.standingPlatform
+        : null;
+      const conveyorDirection = Game.Physics.getConveyorDirection(standingPlatform);
+      this.vx = conveyorDirection === 0
+        ? inputDirection * C.MOVE_SPEED
+        : Game.Physics.getConveyorHorizontalVelocity(standingPlatform, inputDirection);
+
+      if (this.vx < 0) {
+        this.direction = -1;
+      } else if (this.vx > 0) {
         this.direction = 1;
       }
 

@@ -82,27 +82,75 @@
   }
 
   function getMinimumHorizontalDistance(fromPlatform, toPlatform) {
+    return getMinimumHorizontalTravel(fromPlatform, toPlatform).distance;
+  }
+
+  function getMinimumHorizontalTravel(fromPlatform, toPlatform) {
     const fromRange = getSupportedCenterRange(fromPlatform);
     const toRange = getSupportedCenterRange(toPlatform);
 
     if (fromRange.max < toRange.min) {
-      return toRange.min - fromRange.max;
+      return {
+        distance: toRange.min - fromRange.max,
+        direction: 1
+      };
     }
 
     if (toRange.max < fromRange.min) {
-      return fromRange.min - toRange.max;
+      return {
+        distance: fromRange.min - toRange.max,
+        direction: -1
+      };
+    }
+
+    return { distance: 0, direction: 0 };
+  }
+
+  function getConveyorDirection(platform) {
+    if (!platform) {
+      return 0;
+    }
+
+    if (platform.type === "conveyor-left") {
+      return -1;
+    }
+
+    if (platform.type === "conveyor-right") {
+      return 1;
     }
 
     return 0;
   }
 
+  function getConveyorHorizontalVelocity(platform, inputDirection) {
+    const conveyorDirection = getConveyorDirection(platform);
+    if (conveyorDirection === 0) {
+      return 0;
+    }
+
+    if (inputDirection === 0) {
+      return conveyorDirection * C.CONVEYOR_IDLE_DRIFT;
+    }
+
+    const multiplier = inputDirection === conveyorDirection
+      ? C.CONVEYOR_SAME_DIRECTION_MULTIPLIER
+      : C.CONVEYOR_OPPOSITE_DIRECTION_MULTIPLIER;
+
+    return inputDirection * C.MOVE_SPEED * multiplier;
+  }
+
   function evaluateReachability(fromPlatform, toPlatform, scrollSpeed) {
     const verticalGap = toPlatform.y - fromPlatform.y;
     const fallTime = simulateFallTime(verticalGap, scrollSpeed);
-    const requiredDistance = getMinimumHorizontalDistance(fromPlatform, toPlatform);
+    const horizontalTravel = getMinimumHorizontalTravel(fromPlatform, toPlatform);
+    const requiredDistance = horizontalTravel.distance;
+    const conveyorDirection = getConveyorDirection(fromPlatform);
+    const directedSpeed = horizontalTravel.direction === 0 || conveyorDirection === 0
+      ? C.MOVE_SPEED
+      : Math.abs(getConveyorHorizontalVelocity(fromPlatform, horizontalTravel.direction));
     const safeDistance = fallTime === null
       ? 0
-      : C.MOVE_SPEED * fallTime * C.SAFE_REACH_FACTOR;
+      : directedSpeed * fallTime * C.SAFE_REACH_FACTOR;
 
     return {
       reachable: fallTime !== null && requiredDistance <= safeDistance,
@@ -118,6 +166,9 @@
     findLanding,
     simulateFallTime,
     getMinimumHorizontalDistance,
+    getMinimumHorizontalTravel,
+    getConveyorDirection,
+    getConveyorHorizontalVelocity,
     evaluateReachability
   });
 })();

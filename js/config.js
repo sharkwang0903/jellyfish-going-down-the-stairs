@@ -37,6 +37,22 @@
     INITIAL_PLATFORM_Y: 285,
     INITIAL_SAFE_PLATFORM_COUNT: 3,
     BREAKABLE_LIFETIME: 0.3,
+    CONVEYOR_IDLE_DRIFT: 90,
+    CONVEYOR_SAME_DIRECTION_MULTIPLIER: 1.45,
+    CONVEYOR_OPPOSITE_DIRECTION_MULTIPLIER: 0.55,
+    CONVEYOR_VISUAL_SPEED: 80,
+    CONVEYOR_BELT_SLOT: Object.freeze({
+      x: 389 / 2172,
+      y: 300 / 724,
+      width: 1395 / 2172,
+      height: 126 / 724
+    }),
+    CONVEYOR_BELT_SOURCE: Object.freeze({
+      x: 66 / 2172,
+      y: 275 / 724,
+      width: 2041 / 2172,
+      height: 176 / 724
+    }),
 
     MAX_HP: 10,
     NORMAL_HEAL: 1,
@@ -51,7 +67,13 @@
     MAX_SCROLL_SPEED: 255,
     FLOOR_HEIGHT: 600,
 
-    PLATFORM_TYPES: Object.freeze(["normal", "spike", "breakable"]),
+    PLATFORM_TYPES: Object.freeze([
+      "normal",
+      "spike",
+      "breakable",
+      "conveyor-left",
+      "conveyor-right"
+    ]),
     MAX_CONSECUTIVE_SPIKES: 1,
     MAX_DEPTH_WITHOUT_NORMAL_PLATFORM: 2000,
 
@@ -82,6 +104,8 @@
       platformBreakableCracked1: "assets/platform-breakable-cracked-1.png",
       platformBreakableCracked2: "assets/platform-breakable-cracked-2.png",
       platformBreakableBreaking: "assets/platform-breakable-breaking.png",
+      conveyorBase: "assets/conveyor-base.png",
+      conveyorBeltStrip: "assets/conveyor-belt-strip.png",
       ceilingSpikes: "assets/ceiling-spikes.png"
     })
   });

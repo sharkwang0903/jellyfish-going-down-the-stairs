@@ -68,6 +68,16 @@
 - 玩家提前離開不會暫停或重置倒數。
 - 倒數結束後平台失效並移除；若玩家仍站在上面，會解除站立狀態並自然受重力掉落，不會瞬移或獲得額外向下速度。
 
+### Conveyor／傳送帶平台
+
+- `conveyor-left` 與 `conveyor-right` 共用 `assets/conveyor-base.png`、`assets/conveyor-belt-strip.png` 兩張素材。
+- 成功落地時回復 1 HP；其餘非尖刺平台的共通回血規則不變。
+- 只有玩家真正站在傳送帶上時才會套用傳送帶水平公式；離開平台、掉落或被擊落後立即恢復一般移動。
+- 沒有方向輸入時，角色會依帶面方向以 `CONVEYOR_IDLE_DRIFT` 漂移。
+- 輸入方向與帶面相同時，水平速度為 `MOVE_SPEED × CONVEYOR_SAME_DIRECTION_MULTIPLIER`；輸入相反時則為 `MOVE_SPEED × CONVEYOR_OPPOSITE_DIRECTION_MULTIPLIER`。
+- 帶面動畫速度與物理速度分離：`CONVEYOR_VISUAL_SPEED` 只控制帶面捲動，不會影響玩家移動。
+- belt strip 會在底座中央槽內循環平鋪，固定底座繪製於上層，避免帶面超出外框。
+
 破碎動畫使用 `BREAKABLE_LIFETIME / 3` 作為每階段時間：
 
 | 時間 | 狀態 | 素材 |
@@ -131,17 +141,20 @@ scrollSpeed = Math.min(
 - 以 `MOVE_SPEED × fallTime × SAFE_REACH_FACTOR` 計算安全水平距離。
 - 水平判斷使用兩個平台可供玩家站立的範圍，不只比較平台中心點。
 - Breakable 與 Normal 使用相同的可達性條件。
+- 從 Conveyor 離開時，安全水平距離會依順向／逆向倍率調整，避免反向傳送帶令保底路徑過度極限。
 - 若指定間距沒有可達位置，生成器會使用偏好的安全間距再次嘗試，並保留安全的水平位置備援。
 
-在安全規則沒有介入時，三種平台的基礎抽選機率相同：
+在安全規則沒有介入時，五種平台的基礎抽選機率相同：
 
 ```text
-normal    1/3
-spike     1/3
-breakable 1/3
+normal          1/5
+spike           1/5
+breakable       1/5
+conveyor-left   1/5
+conveyor-right  1/5
 ```
 
-既有安全規則仍可覆寫基礎抽選，例如初始安全平台、禁止連續尖刺，以及確保一定距離內重新出現普通平台。因此長期實際統計比例不保證精確各占三分之一。
+既有安全規則仍可覆寫基礎抽選，例如初始安全平台、禁止連續尖刺，以及確保一定距離內重新出現普通平台。因此長期實際統計比例不保證精確各占五分之一。
 
 ## 專案結構
 
@@ -155,7 +168,7 @@ jellyfish-going-down-the-stairs/
    ├─ config.js        所有可調參數與素材路徑
    ├─ physics.js       hitbox、landing 與平台可達性計算
    ├─ player.js        玩家移動、生命、無敵與站立狀態
-   ├─ platforms.js     平台生成、移動、破碎生命週期與清理
+   ├─ platforms.js     平台生成、移動、破碎／傳送帶狀態與清理
    ├─ ui.js            首頁、HUD、最高紀錄與 Game Over 顯示
    ├─ game.js          主迴圈、遊戲狀態、landing 效果與 Canvas 渲染
    └─ main.js          初始化、按鈕與鍵盤事件綁定
@@ -175,6 +188,7 @@ JavaScript 透過 `window.JellyfishGame` 共用命名空間，載入順序定義
 | 普通平台 | `assets/platform-normal.png` |
 | 尖刺平台 | `assets/platform-spike.png` |
 | 破碎平台 | 四張 `platform-breakable-*.png` |
+| 傳送帶平台 | `assets/conveyor-base.png`、`assets/conveyor-belt-strip.png` |
 | 頂部尖刺 | `assets/ceiling-spikes.png` |
 
 Canvas 渲染時停用圖片平滑處理，以保留偽像素風格。
@@ -190,6 +204,7 @@ Canvas 渲染時停用圖片平滑處理，以保留偽像素風格。
 | 平台 | `PLATFORM_*`、`MIN_PLATFORM_GAP`、`MAX_PLATFORM_GAP` |
 | 可達性 | `SAFE_REACH_FACTOR`、`REACH_SIMULATION_*` |
 | 破碎平台 | `BREAKABLE_LIFETIME` |
+| 傳送帶 | `CONVEYOR_IDLE_DRIFT`、`CONVEYOR_SAME_DIRECTION_MULTIPLIER`、`CONVEYOR_OPPOSITE_DIRECTION_MULTIPLIER`、`CONVEYOR_VISUAL_SPEED`、`CONVEYOR_BELT_*` |
 | 生命 | `MAX_HP`、`NORMAL_HEAL`、`SPIKE_DAMAGE`、`INVINCIBLE_TIME` |
 | 捲動 | `INITIAL_SCROLL_SPEED`、`SPEED_STEP`、`MAX_SCROLL_SPEED` |
 | 樓層 | `FLOOR_HEIGHT`、`FLOORS_PER_SPEED_UP` |
@@ -216,11 +231,13 @@ jellyfish-going-down-best-floor-v2
 1. 按住與放開左右鍵時，角色固定速度移動並立即停止。
 2. 角色只會從上方落到平台，不會因側撞或由下穿越而 landing。
 3. 玩家站立時會跟著平台上升，離開邊緣後重新下落。
-4. Normal 與 Breakable 每次 landing 只回血一次；Spike 每次 landing 只傷害一次。
+4. Normal、Breakable 與 Conveyor 每次 landing 只回血一次；Spike 每次 landing 只傷害一次。
 5. Breakable 依序播放三個破碎階段，0.3 秒後消失並讓玩家自然掉落。
-6. 無敵期間不重複受傷，但碰到頂部尖刺仍會被打下。
-7. 樓層、加速、Game Over 與最高紀錄顯示一致。
-8. 重新整理頁面後最高紀錄仍存在。
+6. Conveyor 只在站立時推動玩家；離開邊緣、掉落或被頂部尖刺打下後，推力立即停止。
+7. Conveyor belt strip 在底座中央槽內連續循環，左右方向分別以相反方向捲動。
+8. 無敵期間不重複受傷，但碰到頂部尖刺仍會被打下。
+9. 樓層、加速、Game Over 與最高紀錄顯示一致。
+10. 重新整理頁面後最高紀錄仍存在。
 
 ## 維護原則
 

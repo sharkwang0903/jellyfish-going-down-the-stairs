@@ -8,6 +8,10 @@
     return min + Math.random() * (max - min);
   }
 
+  function isConveyorType(type) {
+    return type === "conveyor-left" || type === "conveyor-right";
+  }
+
   class PlatformManager {
     constructor() {
       this.platforms = [];
@@ -54,6 +58,10 @@
         platform.breakTimer = 0;
       }
 
+      if (isConveyorType(type)) {
+        platform.beltOffset = 0;
+      }
+
       return platform;
     }
 
@@ -85,6 +93,18 @@
       } else {
         platform.state = "cracking1";
       }
+    }
+
+    updateConveyor(platform, dt) {
+      if (!isConveyorType(platform.type)) {
+        return;
+      }
+
+      const direction = platform.type === "conveyor-left" ? -1 : 1;
+      const beltPeriod = C.PLATFORM_WIDTH * C.CONVEYOR_BELT_SOURCE.width;
+      platform.beltOffset = (
+        platform.beltOffset + direction * C.CONVEYOR_VISUAL_SPEED * dt
+      ) % beltPeriod;
     }
 
     chooseGap() {
@@ -134,7 +154,7 @@
       }
 
       const availableTypes = wouldExceedSpikeRun
-        ? ["normal", "breakable"]
+        ? ["normal", "breakable", "conveyor-left", "conveyor-right"]
         : C.PLATFORM_TYPES;
 
       return availableTypes[Math.floor(Math.random() * availableTypes.length)];
@@ -191,6 +211,7 @@
         platform.previousY = platform.y;
         platform.y -= scrollSpeed * dt;
         this.updateBreakable(platform, dt);
+        this.updateConveyor(platform, dt);
 
         if (platform.y + C.SPIKE_VISUAL_HEIGHT + platform.height < -C.PLATFORM_CULL_MARGIN) {
           platform.active = false;

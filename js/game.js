@@ -251,6 +251,11 @@
             platform.width,
             breakableDrawHeight
           );
+        } else if (
+          platform.type === "conveyor-left" ||
+          platform.type === "conveyor-right"
+        ) {
+          this.drawConveyor(platform);
         } else {
           ctx.drawImage(
             this.images.platform,
@@ -261,6 +266,65 @@
           );
         }
       }
+    }
+
+    drawConveyor(platform) {
+      const ctx = this.context;
+      const base = this.images.conveyorBase;
+      const belt = this.images.conveyorBeltStrip;
+      const drawWidth = platform.width;
+      const drawHeight = drawWidth * (base.height / base.width);
+      const drawY = platform.y;
+      const slot = C.CONVEYOR_BELT_SLOT;
+      const source = C.CONVEYOR_BELT_SOURCE;
+      const slotX = platform.x + drawWidth * slot.x;
+      const slotY = drawY + drawHeight * slot.y;
+      const slotWidth = drawWidth * slot.width;
+      const slotHeight = drawHeight * slot.height;
+      const sourceX = belt.width * source.x;
+      const sourceY = belt.height * source.y;
+      const sourceWidth = belt.width * source.width;
+      const sourceHeight = belt.height * source.height;
+      const beltWidth = drawWidth * source.width;
+      const beltHeight = drawHeight * source.height;
+      const isLeftConveyor = platform.type === "conveyor-left";
+      const renderSlotX = isLeftConveyor
+        ? platform.x + drawWidth - (slotX - platform.x) - slotWidth
+        : slotX;
+      const renderOffset = isLeftConveyor
+        ? -platform.beltOffset
+        : platform.beltOffset;
+      const rawOffset = renderOffset % beltWidth;
+      const beltOffset = rawOffset < 0 ? rawOffset + beltWidth : rawOffset;
+      const firstBeltX = renderSlotX - beltWidth + beltOffset;
+      const beltY = drawY + drawHeight * source.y;
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(slotX, slotY, slotWidth, slotHeight);
+      ctx.clip();
+
+      if (isLeftConveyor) {
+        ctx.translate(platform.x * 2 + drawWidth, 0);
+        ctx.scale(-1, 1);
+      }
+
+      for (let x = firstBeltX; x < renderSlotX + slotWidth; x += beltWidth) {
+        ctx.drawImage(
+          belt,
+          sourceX,
+          sourceY,
+          sourceWidth,
+          sourceHeight,
+          x,
+          beltY,
+          beltWidth,
+          beltHeight
+        );
+      }
+
+      ctx.restore();
+      ctx.drawImage(base, platform.x, drawY, drawWidth, drawHeight);
     }
 
     drawPlayer() {
