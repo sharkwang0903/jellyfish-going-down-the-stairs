@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="操控可愛水母，在深藍洞穴中不斷往下探索。">
+  <title>Jellyfish Going Down the Stairs</title>
+  <link rel="icon" type="image/png" href="assets/jellyfish-idle.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="site-main">
+    <section class="game-console" aria-label="Jellyfish Going Down the Stairs 遊戲">
+      <div id="hud" class="hud" aria-hidden="true">
+        <div class="hud__health">
+          <div class="hud__label-row">
+            <span>生命值</span>
+            <strong id="hpText">10 / 10</strong>
+          </div>
+          <div class="health-bar" aria-hidden="true">
+            <span id="hpBar" class="health-bar__fill"></span>
+          </div>
+        </div>
+        <div class="hud__stat">
+          <span>樓層</span>
+          <strong id="floorText">B1</strong>
+        </div>
+        <div class="hud__stat">
+          <span>最高</span>
+          <strong id="bestText">B1</strong>
+        </div>
+      </div>
+
+      <div class="game-window">
+        <canvas
+          id="gameCanvas"
+          width="400"
+          height="600"
+          aria-label="深藍洞穴遊戲畫面。使用左右方向鍵操控水母。"
+        ></canvas>
+
+        <section id="startScreen" class="screen screen--start">
+          <div class="screen__panel">
+            <p class="eyebrow">DEEP CAVE EXPEDITION</p>
+            <h1>Jellyfish<br>Going Down<br>the Stairs</h1>
+            <div class="pixel-divider" aria-hidden="true"></div>
+            <p class="instructions">
+              使用 <kbd>←</kbd> <kbd>→</kbd> 控制水母，<br>
+              不斷往洞穴深處前進，<br>
+              看看你能抵達地下幾樓。
+            </p>
+            <button id="startButton" class="game-button" type="button" disabled>
+              素材載入中…
+            </button>
+            <p id="loadMessage" class="load-message" role="status" aria-live="polite"></p>
+          </div>
+        </section>
+
+        <section id="gameOverScreen" class="screen screen--game-over" hidden>
+          <div class="screen__panel screen__panel--compact">
+            <p class="eyebrow">EXPEDITION ENDED</p>
+            <h2>遊戲結束</h2>
+            <dl class="result-list">
+              <div>
+                <dt>最深地下樓層</dt>
+                <dd id="finalFloor">B1</dd>
+              </div>
+              <div>
+                <dt>最高紀錄</dt>
+                <dd id="finalBest">B1</dd>
+              </div>
+              <div>
+                <dt>死亡原因</dt>
+                <dd id="deathReason">墜落</dd>
+              </div>
+            </dl>
+            <button id="restartButton" class="game-button" type="button">重新開始</button>
+          </div>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <script defer src="js/config.js"></script>
+  <script defer src="js/physics.js"></script>
+  <script defer src="js/player.js"></script>
+  <script defer src="js/platforms.js"></script>
+  <script defer src="js/ui.js"></script>
+  <script defer src="js/game.js"></script>
+  <script defer src="js/main.js"></script>
+</body>
+</html>
