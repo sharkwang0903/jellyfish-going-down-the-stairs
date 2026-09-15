@@ -5,6 +5,7 @@
     const canvas = document.getElementById("gameCanvas");
     const ui = new window.JellyfishGame.UI();
     const game = new window.JellyfishGame.Game(canvas, ui);
+    window.JellyfishGame.MobileControls.initialize(canvas, game);
 
     ui.startButton.addEventListener("click", () => game.start());
     ui.restartButton.addEventListener("click", () => game.start());
