@@ -7,8 +7,9 @@
     const game = new window.JellyfishGame.Game(canvas, ui);
     window.JellyfishGame.MobileControls.initialize(canvas, game);
 
-    ui.startButton.addEventListener("click", () => game.start());
+    ui.startButton.addEventListener("click", () => game.start(ui.gameMode));
     ui.restartButton.addEventListener("click", () => game.start());
+    ui.modeMenuButton.addEventListener("click", () => game.returnToMenu());
 
     window.addEventListener("keydown", (event) => {
       if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") {

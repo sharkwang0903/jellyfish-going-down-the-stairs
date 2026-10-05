@@ -19,16 +19,46 @@
       this.finalFloor = document.getElementById("finalFloor");
       this.finalBest = document.getElementById("finalBest");
       this.deathReason = document.getElementById("deathReason");
+      this.modeInputs = Array.from(document.querySelectorAll('input[name="gameMode"]'));
+      this.modeMenuButton = document.getElementById("modeMenuButton");
+      this.gameMode = null;
+      this.ready = false;
+      for (const input of this.modeInputs) {
+        input.addEventListener("change", () => {
+          this.gameMode = input.value;
+          this.startButton.disabled = !this.ready;
+          if (this.ready) {
+            this.startButton.textContent = "開始遊戲";
+          }
+        });
+      }
     }
 
     setReady() {
-      this.startButton.disabled = false;
-      this.startButton.textContent = "開始遊戲";
+      this.ready = true;
+      this.startButton.disabled = !this.gameMode;
+      this.startButton.textContent = this.gameMode ? "開始遊戲" : "請先選擇模式";
       this.loadMessage.textContent = "";
+    }
+
+    setSpecialReady(ready) {
+      const input = this.modeInputs.find((input) => input.value === "special");
+      input.disabled = !ready;
+      if (!ready) {
+        this.loadMessage.textContent = "特殊模式素材載入失敗，仍可選擇經典模式。";
+      }
+    }
+
+    resetModeSelection() {
+      this.gameMode = null;
+      this.modeInputs.forEach((input) => { input.checked = false; });
+      this.startButton.disabled = true;
+      this.startButton.textContent = "請先選擇模式";
     }
 
     showLoadError(message) {
       this.startButton.disabled = true;
+      this.ready = false;
       this.startButton.textContent = "無法開始";
       this.loadMessage.textContent = message;
     }

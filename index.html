@@ -49,6 +49,17 @@
               不斷往洞穴深處前進，<br>
               看看你能抵達地下幾樓。
             </p>
+            <fieldset class="mode-select">
+              <legend>選擇模式</legend>
+              <label>
+                <input type="radio" name="gameMode" value="classic">
+                <span>經典模式</span>
+              </label>
+              <label>
+                <input type="radio" name="gameMode" value="special" disabled>
+                <span>特殊模式</span>
+              </label>
+            </fieldset>
             <button id="startButton" class="game-button" type="button" disabled>
               素材載入中…
             </button>
@@ -75,6 +86,7 @@
               </div>
             </dl>
             <button id="restartButton" class="game-button" type="button">重新開始</button>
+            <button id="modeMenuButton" class="mode-menu-button" type="button">選擇模式</button>
           </div>
         </section>
       </div>
@@ -84,6 +96,7 @@
   <script defer src="js/config.js"></script>
   <script defer src="js/physics.js"></script>
   <script defer src="js/player.js"></script>
+  <script defer src="js/special-mode.js"></script>
   <script defer src="js/platforms.js"></script>
   <script defer src="js/ui.js"></script>
   <script defer src="js/game.js"></script>

@@ -20,14 +20,20 @@
       this.consecutiveSpikes = 0;
       this.depthSinceNormal = 0;
       this.generatedCount = 0;
+      this.gameMode = "classic";
+      this.worldDepth = 0;
+      this.nextPpaFloor = 5;
     }
 
-    reset(scrollSpeed) {
+    reset(scrollSpeed, gameMode = "classic") {
       this.platforms = [];
       this.nextId = 1;
       this.consecutiveSpikes = 0;
       this.depthSinceNormal = 0;
       this.generatedCount = 0;
+      this.gameMode = gameMode;
+      this.worldDepth = 0;
+      this.nextPpaFloor = 5;
 
       const firstPlatform = this.createPlatform(
         (C.GAME_WIDTH - C.PLATFORM_WIDTH) / 2,
@@ -224,8 +230,15 @@
       const x = reachablePositions.length > 0
         ? reachablePositions[Math.floor(Math.random() * reachablePositions.length)]
         : fallbackX;
-      const type = this.choosePlatformType(gap);
+      const specialPlan = this.gameMode === "special"
+        ? Game.SpecialMode.planPlatform(this, gap, y)
+        : null;
+      const type = (specialPlan && specialPlan.type) || this.choosePlatformType(gap);
       const platform = this.createPlatform(x, y, type);
+      if (specialPlan && specialPlan.ppaFloor) {
+        platform.ppaFloor = specialPlan.ppaFloor;
+        platform.ppaCollected = false;
+      }
 
       this.generatedCount += 1;
       if (type === "spike") {
@@ -248,7 +261,8 @@
       }
     }
 
-    update(dt, scrollSpeed) {
+    update(dt, scrollSpeed, worldDepth = 0) {
+      this.worldDepth = worldDepth;
       for (const platform of this.platforms) {
         platform.previousY = platform.y;
         platform.y -= scrollSpeed * dt;

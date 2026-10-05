@@ -15,6 +15,9 @@
       this.platformManager = new GameNamespace.PlatformManager();
       this.input = { left: false, right: false };
       this.state = "loading";
+      this.gameMode = null;
+      this.specialMode = null;
+      this.specialImagesReady = false;
       this.worldDepth = 0;
       this.currentFloor = 1;
       this.bestFloor = this.loadBestFloor();
@@ -32,6 +35,13 @@
         this.render();
         this.ui.showStart();
         this.ui.setReady();
+        this.loadImages(GameNamespace.SpecialMode.ASSETS).then(() => {
+          this.specialImagesReady = true;
+          this.ui.setSpecialReady(true);
+        }).catch((error) => {
+          this.ui.setSpecialReady(false);
+          console.error(error);
+        });
       } catch (error) {
         this.state = "error";
         this.ui.showLoadError("圖片素材載入失敗，請確認 assets 資料夾完整。 ");
@@ -39,8 +49,8 @@
       }
     }
 
-    loadImages() {
-      const entries = Object.entries(C.ASSETS);
+    loadImages(assets = C.ASSETS) {
+      const entries = Object.entries(assets);
       return Promise.all(entries.map(([key, source]) => new Promise((resolve, reject) => {
         const image = new Image();
         image.onload = () => {
@@ -76,14 +86,23 @@
       this.currentFloor = 1;
       this.scrollSpeed = C.INITIAL_SCROLL_SPEED;
       this.player.reset();
-      const startingPlatform = this.platformManager.reset(this.scrollSpeed);
+      if (this.specialMode) {
+        this.specialMode.reset();
+      }
+      const startingPlatform = this.platformManager.reset(
+        this.scrollSpeed, this.gameMode || "classic"
+      );
       this.player.x = startingPlatform.x + (startingPlatform.width - C.PLAYER_WIDTH) / 2;
       this.player.placeOn(startingPlatform);
       this.ui.updateHUD(this.player.hp, this.currentFloor, this.bestFloor);
     }
 
-    start() {
+    start(gameMode = this.gameMode) {
       if (this.state === "loading" || this.state === "error") {
+        return;
+      }
+      if ((gameMode !== "classic" && gameMode !== "special") ||
+          (gameMode === "special" && !this.specialImagesReady)) {
         return;
       }
 
@@ -91,11 +110,27 @@
         cancelAnimationFrame(this.animationFrameId);
       }
 
+      this.gameMode = gameMode;
+      this.specialMode = gameMode === "special" ? new GameNamespace.SpecialMode() : null;
       this.resetWorld();
       this.state = "running";
       this.ui.showGame();
       this.lastFrameTime = performance.now();
       this.animationFrameId = requestAnimationFrame(this.loop);
+    }
+
+    returnToMenu() {
+      if (this.animationFrameId !== null) {
+        cancelAnimationFrame(this.animationFrameId);
+        this.animationFrameId = null;
+      }
+      this.gameMode = null;
+      this.specialMode = null;
+      this.state = "menu";
+      this.resetWorld();
+      this.render();
+      this.ui.resetModeSelection();
+      this.ui.showStart();
     }
 
     setInput(direction, pressed) {
@@ -143,8 +178,20 @@
         this.saveBestFloor();
       }
 
-      this.platformManager.update(dt, this.scrollSpeed);
+      if (this.specialMode) {
+        this.specialMode.update(dt, this.player);
+        if (this.player.hp <= 0) {
+          this.endGame("hp");
+          return;
+        }
+      }
+      this.platformManager.update(dt, this.scrollSpeed, this.worldDepth);
       this.player.update(dt, this.input);
+      if (this.specialMode) {
+        this.specialMode.collectItems(
+          this.player, this.platformManager.platforms, this.currentFloor
+        );
+      }
 
       if (!this.player.standingPlatform) {
         const landingPlatform = GameNamespace.Physics.findLanding(
@@ -179,8 +226,15 @@
 
       this.player.landOn(platform);
 
+      if (this.specialMode && platform.type === "irritant") {
+        this.specialMode.landOnIrritant(this.player);
+        return;
+      }
+
       if (platform.type === "spike") {
-        this.player.takeDamage(C.SPIKE_DAMAGE);
+        if (!this.specialMode || !this.specialMode.isProtected()) {
+          this.player.takeDamage(C.SPIKE_DAMAGE);
+        }
       } else {
         this.player.heal(C.NORMAL_HEAL);
 
@@ -196,13 +250,18 @@
         return;
       }
 
-      this.player.takeDamage(C.SPIKE_DAMAGE);
+      if (!this.specialMode || !this.specialMode.isProtected()) {
+        this.player.takeDamage(C.SPIKE_DAMAGE);
+      }
       this.player.knockDown();
     }
 
     endGame(reason) {
       this.state = "gameOver";
       this.clearInput();
+      if (this.specialMode) {
+        this.specialMode.reset();
+      }
       this.saveBestFloor();
       this.ui.updateHUD(this.player.hp, this.currentFloor, this.bestFloor);
       this.ui.showGameOver(this.currentFloor, this.bestFloor, reason);
@@ -264,7 +323,8 @@
           this.drawSpring(platform);
         } else {
           ctx.drawImage(
-            this.images.platform,
+            this.specialMode && platform.type === "irritant"
+              ? this.images.platformIrritant : this.images.platform,
             platform.x,
             platform.y,
             platform.width,
@@ -366,15 +426,21 @@
       }
 
       const ctx = this.context;
-      const image = this.images[this.player.getSpriteKey()];
+      const spriteKey = this.player.getSpriteKey();
+      const image = this.images[spriteKey];
+      const overlayKey = this.specialMode ? this.specialMode.getOverlayKey(spriteKey) : null;
+      const overlay = overlayKey ? this.images[overlayKey] : null;
       const drawX = this.player.x - (C.PLAYER_DRAW_WIDTH - C.PLAYER_WIDTH) / 2;
       const drawY = this.player.y - (C.PLAYER_DRAW_HEIGHT - C.PLAYER_HEIGHT) / 2;
 
       ctx.save();
-      if (this.player.direction < 0 && this.player.getSpriteKey() === "playerMove") {
+      if (this.player.direction < 0 && spriteKey === "playerMove") {
         ctx.translate(drawX + C.PLAYER_DRAW_WIDTH, drawY);
         ctx.scale(-1, 1);
         ctx.drawImage(image, 0, 0, C.PLAYER_DRAW_WIDTH, C.PLAYER_DRAW_HEIGHT);
+        if (overlay) {
+          ctx.drawImage(overlay, 0, 0, C.PLAYER_DRAW_WIDTH, C.PLAYER_DRAW_HEIGHT);
+        }
       } else {
         ctx.drawImage(
           image,
@@ -383,6 +449,9 @@
           C.PLAYER_DRAW_WIDTH,
           C.PLAYER_DRAW_HEIGHT
         );
+        if (overlay) {
+          ctx.drawImage(overlay, drawX, drawY, C.PLAYER_DRAW_WIDTH, C.PLAYER_DRAW_HEIGHT);
+        }
       }
       ctx.restore();
     }
@@ -420,6 +489,11 @@
       ctx.imageSmoothingEnabled = false;
       this.drawBackground();
       this.drawPlatforms();
+      if (this.specialMode) {
+        this.specialMode.drawItems(
+          ctx, this.images, this.platformManager.platforms, this.currentFloor
+        );
+      }
       this.drawPlayer();
       this.drawWalls();
       this.drawTopSpikes();
