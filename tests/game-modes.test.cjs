@@ -85,7 +85,7 @@ test("mode is required; restart preserves it; returning to menu clears it", () =
   assert.equal(game.specialMode, null);
   game.start("classic");
   assert.equal(game.platformManager.gameMode, "classic");
-  assert.equal(game.platformManager.nextPpaFloor, 5);
+  assert.equal(game.platformManager.nextPpaFloor, 2);
 });
 
 test("missing special assets do not block Classic", () => {
@@ -274,7 +274,7 @@ test("cream is collected only by touching its bounds; missed cream is not replac
   assert.equal(game.platformManager.platforms.includes(missed), false);
 });
 
-test("generation to B60: exactly one normal cream carrier per fifth floor, no early irritant", () => {
+test("Special generation preserves B2 start and the B52 cadence change", () => {
   for (const mode of ["classic", "special"]) {
     const { namespace } = makeRuntime();
     const manager = new namespace.PlatformManager();
@@ -289,27 +289,27 @@ test("generation to B60: exactly one normal cream carrier per fifth floor, no ea
       continue;
     }
     const floors = creams.map((p) => p.ppaFloor);
-    for (let floor = 5; floor <= 60; floor += 5) {
+    for (const floor of [2, 7, 12, 17, 22, 27, 32, 37, 42, 47, 52, 55, 58]) {
       assert.equal(floors.filter((value) => value === floor).length, 1, `B${floor}`);
     }
     assert.ok(creams.every((p) => p.type === "normal"));
     assert.ok(manager.platforms.some((p) => p.type === "irritant"));
     for (const p of manager.platforms.filter((p) => p.type === "irritant")) {
-      assert.ok(p.y >= 4 * namespace.CONFIG.FLOOR_HEIGHT + namespace.CONFIG.GAME_HEIGHT);
+      assert.ok(p.y >= namespace.CONFIG.FLOOR_HEIGHT + namespace.CONFIG.GAME_HEIGHT);
     }
-    const b5 = creams.find((p) => p.ppaFloor === 5);
-    assert.ok(b5.y >= 3000 && b5.y < 3140);
+    const first = creams.find((p) => p.ppaFloor === 2);
+    assert.ok(first.y >= 1200 && first.y < 1340);
   }
 });
 
-test("irritant threshold is 10% at B5–B49 and 1/6 at B50+, with original safety guarantees", () => {
+test("irritant threshold is 10% at B2–B29 and 1/6 at B30+, with original safety guarantees", () => {
   const { namespace, math } = makeRuntime();
   const manager = new namespace.PlatformManager();
   manager.generatedCount = 20;
   manager.nextPpaFloor = Infinity;
   for (const [floor, sample, expected] of [
-    [4, 0, null], [5, 0.0999, "irritant"], [5, 0.1, null],
-    [49, 0.1, null], [50, 0.16, "irritant"], [50, 1 / 6, null]
+    [1, 0, null], [2, 0.0999, "irritant"], [2, 0.1, null],
+    [29, 0.1, null], [30, 0.16, "irritant"], [30, 1 / 6, null]
   ]) {
     math.random = () => sample;
     manager.worldDepth = (floor - 1) * 600;
@@ -359,8 +359,8 @@ test("all asset references exist and core physics, config, player, touch and sha
   }
 });
 
-test("real UI/main wiring preserves keyboard and mobile controls in both modes", () => {
-  for (const mode of ["classic", "special"]) {
+test("real UI/main wiring preserves keyboard and mobile controls in all modes", () => {
+  for (const mode of ["classic", "special", "crazy-ppa"]) {
     const { namespace, ctx, game: drawingGame } = makeRuntime();
     const events = () => ({
       listeners: {}, style: {}, hidden: false, disabled: false, checked: false,
@@ -376,7 +376,7 @@ test("real UI/main wiring preserves keyboard and mobile controls in both modes",
     canvas.getContext = () => drawingGame.context;
     canvas.getBoundingClientRect = () => ({ left: 10, width: 400 });
     canvas.setPointerCapture = () => {};
-    const inputs = ["classic", "special"].map((value) => ({ ...events(), value }));
+    const inputs = ["classic", "special", "crazy-ppa"].map((value) => ({ ...events(), value }));
     const document = { ...events(), getElementById: (id) => elements[id], querySelectorAll: () => inputs };
     ctx.document = document;
     ctx.window.addEventListener = (name, fn) => { ctx.window[name] = fn; };
@@ -448,7 +448,7 @@ test("live scrolling preserves HUD floor timing, item cadence and first irritant
   manager.getReachableXPositions = () => [150];
   const seen = new Map();
   let depth = 0;
-  let visibleB5Cream = false;
+  let visibleB2Cream = false;
   while (depth < 60 * 600) {
     const floor = Math.floor(depth / 600) + 1;
     const speed = Math.min(255, 75 + Math.floor((floor - 1) / 10) * 10);
@@ -457,31 +457,32 @@ test("live scrolling preserves HUD floor timing, item cadence and first irritant
     manager.update(1 / 30, speed, depth);
     for (const platform of manager.platforms) {
       if (platform.type === "irritant" && platform.y < 600) {
-        assert.ok(currentFloor >= 5);
+        assert.ok(currentFloor >= 2);
       }
       if (platform.ppaFloor) {
         seen.set(platform.id, platform.ppaFloor);
-        if (platform.ppaFloor === 5 && currentFloor === 5 && platform.y < 600) {
-          visibleB5Cream = true;
+        if (platform.ppaFloor === 2 && currentFloor === 2 && platform.y < 600) {
+          visibleB2Cream = true;
         }
       }
     }
   }
-  assert.equal(visibleB5Cream, true);
-  for (let floor = 5; floor <= 60; floor += 5) {
+  assert.equal(visibleB2Cream, true);
+  for (const floor of [2, 7, 12, 17, 22, 27, 32, 37, 42, 47, 52, 55, 58]) {
     assert.equal([...seen.values()].filter((value) => value === floor).length, 1, `B${floor}`);
   }
 });
 
-test("Classic matches original seeded generation, physics, health, floors, death and render calls", {
+test("Classic and Special match their pre-change generation, gameplay and rendering", {
   skip: !process.env.JELLYFISH_CLASSIC_BASELINE
 }, () => {
   const baseline = process.env.JELLYFISH_CLASSIC_BASELINE;
+  for (const mode of ["classic", "special"]) {
   for (const seed of [1, 42, 12345]) {
     const before = makeRuntime(baseline, seed);
     const after = makeRuntime(ROOT, seed);
-    before.game.start();
-    after.game.start("classic");
+    before.game.start(mode);
+    after.game.start(mode);
     before.game.platformManager.getReachableXPositions = () => [150];
     after.game.platformManager.getReachableXPositions = () => [150];
     for (let i = 0; i < 500; i++) {
@@ -497,7 +498,7 @@ test("Classic matches original seeded generation, physics, health, floors, death
     for (let frame = 0; frame < 2400; frame++) {
       for (const runtime of [before, after]) {
         if (runtime.game.state !== "running") {
-          runtime.game.start(runtime === after ? "classic" : undefined);
+          runtime.game.start(mode);
         }
         runtime.game.setInput("left", frame % 120 < 30);
         runtime.game.setInput("right", frame % 120 >= 60 && frame % 120 < 90);
@@ -511,5 +512,129 @@ test("Classic matches original seeded generation, physics, health, floors, death
         assert.equal(JSON.stringify(before.calls), JSON.stringify(after.calls));
       }
     }
+  }
+  }
+});
+
+test("Crazy PPA has four poison platforms per normal, independently of PPA items", () => {
+  const itemSlots = new Set();
+  const arrangements = new Set();
+  for (const seed of [1, 42, 12345, 987, 555]) {
+    for (const fixedGap of [null, 40, 140]) {
+      const { namespace } = makeRuntime(ROOT, seed);
+      const C = namespace.CONFIG;
+      const manager = new namespace.PlatformManager();
+      if (fixedGap) manager.chooseGap = () => fixedGap;
+      manager.reset(C.INITIAL_SCROLL_SPEED, "crazy-ppa");
+      manager.getReachableXPositions = () => [150];
+      while (manager.lastPathPlatform.y < 62 * C.FLOOR_HEIGHT) {
+        manager.appendReachablePlatform(C.MAX_SCROLL_SPEED);
+      }
+      const floorOf = (p) => Math.max(1, Math.floor((p.y - C.GAME_HEIGHT) / C.FLOOR_HEIGHT) + 1);
+      assert.ok(manager.platforms.every((p) => ["normal", "irritant"].includes(p.type)));
+      const start = manager.platforms[0];
+      assert.equal(start.type, "normal");
+      assert.equal(start.ppaFloor, 1);
+      const generated = manager.platforms.slice(1);
+      for (let i = 0; i + 5 <= generated.length; i += 5) {
+        const group = generated.slice(i, i + 5);
+        assert.equal(group.filter((p) => p.type === "irritant").length, 4);
+        assert.equal(group.filter((p) => p.type === "normal").length, 1);
+        arrangements.add(group.map((p) => p.type).join(','));
+      }
+      assert.ok(generated.slice(0, 5).some((p) => floorOf(p) === 1 && p.type === "irritant"));
+      for (let floor = 2; floor <= 60; floor += 1) {
+        const platforms = manager.platforms.filter((p) => floorOf(p) === floor);
+        const creams = platforms.filter((p) => p.ppaFloor);
+        assert.equal(creams.length, 1);
+        assert.equal(creams[0].ppaFloor, floor);
+        assert.equal(floorOf(creams[0]), floor);
+        itemSlots.add(platforms.indexOf(creams[0]));
+      }
+      const creamFloors = manager.platforms.filter((p) => p.ppaFloor).map((p) => p.ppaFloor);
+      assert.equal(new Set(creamFloors).size, creamFloors.length);
+    }
+  }
+  assert.ok(itemSlots.size > 1);
+  assert.ok(arrangements.size > 1);
+});
+
+test("Crazy PPA opening item is visible, collectible immediately, and restored on restart", () => {
+  const { game, calls } = makeRuntime();
+  game.start("crazy-ppa");
+  const start = game.platformManager.platforms[0];
+  assert.equal(start.ppaFloor, 1);
+  assert.equal(start.ppaCollected, false);
+  game.specialMode.drawItems(game.context, game.images, [start], 1);
+  assert.ok(calls.some(([name, key]) => name === "drawImage" && key === "ppaCream"));
+  game.update(1 / 60);
+  assert.equal(start.ppaCollected, true);
+  assert.equal(game.specialMode.shieldRemaining, 3);
+  assert.equal(game.player.hp, 10);
+  land(game, "irritant");
+  assert.equal(game.player.hp, 10);
+  game.endGame("fall");
+  game.start();
+  const restarted = game.platformManager.platforms[0];
+  assert.equal(restarted.ppaFloor, 1);
+  assert.equal(restarted.ppaCollected, false);
+  game.update(1 / 60);
+  assert.equal(restarted.ppaCollected, true);
+  assert.equal(game.specialMode.shieldRemaining, 3);
+});
+
+test("Crazy PPA reuses damage, pickup, shield and reset behavior and requires its assets", () => {
+  const { game, namespace } = makeRuntime();
+  game.specialImagesReady = false;
+  game.start("crazy-ppa");
+  assert.equal(game.state, "menu");
+  game.specialImagesReady = true;
+  game.start("crazy-ppa");
+  land(game, "irritant");
+  assert.equal(game.player.hp, 9);
+  tick(game.specialMode, game.player, 1);
+  assert.equal(game.player.hp, 8);
+  const carrier = land(game, "normal");
+  carrier.ppaFloor = 2;
+  game.specialMode.collectItems(game.player, [carrier], 2);
+  assert.equal(carrier.ppaCollected, true);
+  assert.equal(game.specialMode.itchTicksRemaining, 0);
+  assert.equal(game.specialMode.shieldRemaining, 3);
+  land(game, "irritant");
+  assert.equal(game.player.hp, 9);
+  tick(game.specialMode, game.player, 3);
+  land(game, "irritant");
+  assert.equal(game.player.hp, 8);
+  game.endGame("hp");
+  game.start();
+  assert.equal(game.gameMode, "crazy-ppa");
+  assert.equal(game.player.hp, namespace.CONFIG.MAX_HP);
+  assert.equal(game.specialMode.shieldRemaining, 0);
+  assert.equal(game.platformManager.nextPpaFloor, 2);
+  assert.equal(game.platformManager.crazyPpaItemSlot, null);
+  game.returnToMenu();
+  assert.equal(game.specialMode, null);
+});
+
+test("Crazy PPA live scrolling keeps one collectible on every floor from B1 through B60", () => {
+  const { namespace } = makeRuntime();
+  const C = namespace.CONFIG;
+  const manager = new namespace.PlatformManager();
+  manager.reset(C.INITIAL_SCROLL_SPEED, "crazy-ppa");
+  manager.getReachableXPositions = () => [150];
+  const seen = new Map([[manager.platforms[0].id, 1]]);
+  let depth = 0;
+  while (depth < 60 * C.FLOOR_HEIGHT) {
+    const floor = Math.floor(depth / C.FLOOR_HEIGHT) + 1;
+    const speed = Math.min(C.MAX_SCROLL_SPEED, C.INITIAL_SCROLL_SPEED + Math.floor((floor - 1) / C.FLOORS_PER_SPEED_UP) * C.SPEED_STEP);
+    depth += speed / 30;
+    manager.update(1 / 30, speed, depth);
+    const currentFloor = Math.floor(depth / C.FLOOR_HEIGHT) + 1;
+    for (const p of manager.platforms) {
+      if (p.ppaFloor && currentFloor >= p.ppaFloor && p.y < C.GAME_HEIGHT && p.y > 0) seen.set(p.id, p.ppaFloor);
+    }
+  }
+  for (let floor = 1; floor <= 60; floor += 1) {
+    assert.equal([...seen.values()].filter((f) => f === floor).length, 1, `B${floor}`);
   }
 });

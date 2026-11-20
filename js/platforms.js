@@ -32,6 +32,8 @@
       this.depthSinceNormal = 0;
       this.generatedCount = 0;
       this.gameMode = gameMode;
+      this.crazyPpaPlan = null;
+      this.crazyPpaItemSlot = null;
       this.worldDepth = 0;
       this.nextPpaFloor = 2;
 
@@ -40,6 +42,10 @@
         C.INITIAL_PLATFORM_Y,
         "normal"
       );
+      if (gameMode === "crazy-ppa") {
+        firstPlatform.ppaFloor = 1;
+        firstPlatform.ppaCollected = false;
+      }
       this.platforms.push(firstPlatform);
       this.lastPathPlatform = firstPlatform;
       this.fillBelowScreen(scrollSpeed);
@@ -230,7 +236,7 @@
       const x = reachablePositions.length > 0
         ? reachablePositions[Math.floor(Math.random() * reachablePositions.length)]
         : fallbackX;
-      const specialPlan = this.gameMode === "special"
+      const specialPlan = this.gameMode === "special" || this.gameMode === "crazy-ppa"
         ? Game.SpecialMode.planPlatform(this, gap, y)
         : null;
       const type = (specialPlan && specialPlan.type) || this.choosePlatformType(gap);

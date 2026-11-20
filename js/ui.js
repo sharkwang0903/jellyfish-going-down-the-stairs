@@ -42,8 +42,11 @@
     }
 
     setSpecialReady(ready) {
-      const input = this.modeInputs.find((input) => input.value === "special");
-      input.disabled = !ready;
+      for (const input of this.modeInputs) {
+        if (input.value === "special" || input.value === "crazy-ppa") {
+          input.disabled = !ready;
+        }
+      }
       if (!ready) {
         this.loadMessage.textContent = "特殊模式素材載入失敗，仍可選擇經典模式。";
       }

@@ -292,6 +292,7 @@ kbd {
 
 .mode-select {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   margin: 0 0 16px;
   padding: 0;
@@ -309,6 +310,15 @@ kbd {
   position: relative;
   flex: 1;
   cursor: pointer;
+}
+
+.mode-select .mode-select__wide {
+  flex-basis: 100%;
+}
+
+.screen--start {
+  overflow-y: auto;
+  align-items: safe center;
 }
 
 .mode-select input {

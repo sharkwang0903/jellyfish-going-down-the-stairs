@@ -88,6 +88,9 @@
       const floor = Math.max(1, Math.floor(
         (manager.worldDepth + y - C.GAME_HEIGHT) / C.FLOOR_HEIGHT
       ) + 1);
+      if (manager.gameMode === "crazy-ppa") {
+        return SpecialMode.planCrazyPlatform(manager, floor);
+      }
       if (floor >= manager.nextPpaFloor) {
         const ppaFloor = manager.nextPpaFloor;
         manager.nextPpaFloor += ppaFloor < 50 ? 5 : 3;
@@ -100,6 +103,34 @@
       }
       const rate = floor < 30 ? 0.1 : 1 / 6;
       return { type: Math.random() < rate ? "irritant" : null };
+    }
+
+    static planCrazyPlatform(manager, floor) {
+      // Every shuffled group of five generated platforms has four poisons
+      // and one normal. Cream placement never changes this platform ratio.
+      if (!manager.crazyPpaPlan || manager.crazyPpaPlan.length === 0) {
+        const slots = ["irritant", "irritant", "irritant", "irritant", "normal"];
+        for (let i = slots.length - 1; i > 0; i -= 1) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [slots[i], slots[j]] = [slots[j], slots[i]];
+        }
+        manager.crazyPpaPlan = slots;
+      }
+      const plan = { type: manager.crazyPpaPlan.pop() };
+      if (floor >= manager.nextPpaFloor) {
+        // At least four platforms fit in a floor with the current max gap.
+        if (manager.crazyPpaItemSlot === null) {
+          manager.crazyPpaItemSlot = Math.floor(Math.random() * 4);
+        }
+        if (manager.crazyPpaItemSlot === 0) {
+          plan.ppaFloor = manager.nextPpaFloor;
+          manager.nextPpaFloor += 1;
+          manager.crazyPpaItemSlot = null;
+        } else {
+          manager.crazyPpaItemSlot -= 1;
+        }
+      }
+      return plan;
     }
 
     static getItemBounds(platform) {

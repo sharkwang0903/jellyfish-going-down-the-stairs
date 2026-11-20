@@ -101,8 +101,8 @@
       if (this.state === "loading" || this.state === "error") {
         return;
       }
-      if ((gameMode !== "classic" && gameMode !== "special") ||
-          (gameMode === "special" && !this.specialImagesReady)) {
+      if (!["classic", "special", "crazy-ppa"].includes(gameMode) ||
+          (gameMode !== "classic" && !this.specialImagesReady)) {
         return;
       }
 
@@ -111,7 +111,7 @@
       }
 
       this.gameMode = gameMode;
-      this.specialMode = gameMode === "special" ? new GameNamespace.SpecialMode() : null;
+      this.specialMode = gameMode !== "classic" ? new GameNamespace.SpecialMode() : null;
       this.resetWorld();
       this.state = "running";
       this.ui.showGame();
