@@ -22,7 +22,7 @@
       this.generatedCount = 0;
       this.gameMode = "classic";
       this.worldDepth = 0;
-      this.nextPpaFloor = 5;
+      this.nextPpaFloor = 2;
     }
 
     reset(scrollSpeed, gameMode = "classic") {
@@ -33,7 +33,7 @@
       this.generatedCount = 0;
       this.gameMode = gameMode;
       this.worldDepth = 0;
-      this.nextPpaFloor = 5;
+      this.nextPpaFloor = 2;
 
       const firstPlatform = this.createPlatform(
         (C.GAME_WIDTH - C.PLATFORM_WIDTH) / 2,

@@ -90,15 +90,15 @@
       ) + 1);
       if (floor >= manager.nextPpaFloor) {
         const ppaFloor = manager.nextPpaFloor;
-        manager.nextPpaFloor += 5;
+        manager.nextPpaFloor += ppaFloor < 50 ? 5 : 3;
         return { type: "normal", ppaFloor };
       }
       const mustBeNormal = manager.generatedCount < C.INITIAL_SAFE_PLATFORM_COUNT ||
         manager.depthSinceNormal + gap >= C.MAX_DEPTH_WITHOUT_NORMAL_PLATFORM;
-      if (floor < 5 || mustBeNormal) {
+      if (floor < 2 || mustBeNormal) {
         return { type: null };
       }
-      const rate = floor < 50 ? 0.1 : 1 / 6;
+      const rate = floor < 30 ? 0.1 : 1 / 6;
       return { type: Math.random() < rate ? "irritant" : null };
     }
 
